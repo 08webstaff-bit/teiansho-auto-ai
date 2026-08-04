@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+cache/images/
+cache/lists/
+output/
+.DS_Store
+.pytest_cache/
+.vercel
