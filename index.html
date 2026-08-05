@@ -230,18 +230,19 @@ const INDUSTRY = ["工場","商業施設","教育施設","イベント","倉庫�
 const S = { file: null, quote: null, resolved: [], cases: [], pptx: null, pptxName: "提案書.pptx" };
 
 /* ---------------- 共通 ---------------- */
-// API の入口が "/api/xxx" か "/xxx" かはホスティング側の設定で変わるため、
+// API の入口が "/xxx" か "/api/xxx" かはホスティング側の設定で変わるため、
 // 最初の1回だけ /health で疎通確認して使えるほうを覚える。
+// Vercel では "/api" 配下がアプリまで届かないため、根本パスを先に試す。
 let API_BASE = null;
 async function apiBase() {
   if (API_BASE !== null) return API_BASE;
-  for (const p of ["/api", ""]) {
+  for (const p of ["", "/api"]) {
     try {
       const r = await fetch(p + "/health");
       if (r.ok) { API_BASE = p; return API_BASE; }
     } catch (_) { /* 次を試す */ }
   }
-  API_BASE = "/api";
+  API_BASE = "";
   return API_BASE;
 }
 
@@ -389,7 +390,11 @@ async function doSelect() {
     if (!S.cases.length) {
       const base = await apiBase();
       const r = await fetch(base + "/cases");
-      S.cases = (await r.json()).cases;
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !Array.isArray(d.cases)) {
+        throw new Error(d.detail || `カテゴリー一覧を取得できませんでした (${r.status})`);
+      }
+      S.cases = d.cases;
     }
     const data = await apiJson("/api/select", { quote: S.quote });
     S.resolved = data.resolved;
