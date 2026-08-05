@@ -229,3 +229,21 @@ def index() -> Response:
     if not html.exists():
         return JSONResponse({"status": "ok", "hint": "index.html が見つかりません"})
     return Response(content=html.read_text(encoding="utf-8"), media_type="text/html")
+
+
+@app.api_route("/{full_path:path}", methods=["GET", "POST"], include_in_schema=False)
+def not_found(full_path: str) -> Response:
+    """どのルートにも一致しなかったとき、実際に届いたパスを返す。
+
+    ホスティング側のルーティングでパスが変わっていても原因が分かるようにするための保険。
+    """
+    return JSONResponse(
+        status_code=404,
+        content={
+            "detail": "Not Found",
+            "received_path": "/" + full_path,
+            "known_paths": sorted(
+                {r.path for r in app.routes if getattr(r, "path", "").startswith("/api")}
+            ),
+        },
+    )

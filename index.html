@@ -230,6 +230,21 @@ const INDUSTRY = ["工場","商業施設","教育施設","イベント","倉庫�
 const S = { file: null, quote: null, resolved: [], cases: [], pptx: null, pptxName: "提案書.pptx" };
 
 /* ---------------- 共通 ---------------- */
+// API の入口が "/api/xxx" か "/xxx" かはホスティング側の設定で変わるため、
+// 最初の1回だけ /health で疎通確認して使えるほうを覚える。
+let API_BASE = null;
+async function apiBase() {
+  if (API_BASE !== null) return API_BASE;
+  for (const p of ["/api", ""]) {
+    try {
+      const r = await fetch(p + "/health");
+      if (r.ok) { API_BASE = p; return API_BASE; }
+    } catch (_) { /* 次を試す */ }
+  }
+  API_BASE = "/api";
+  return API_BASE;
+}
+
 function note(el, cls, html) {
   document.getElementById(el).innerHTML = html ? `<div class="note ${cls}">${html}</div>` : "";
 }
@@ -246,7 +261,8 @@ function step(n) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 async function apiJson(path, body) {
-  const r = await fetch(path, {
+  const base = await apiBase();
+  const r = await fetch(base + path, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
   const data = await r.json().catch(() => ({}));
@@ -305,7 +321,8 @@ async function doExtract() {
     }
     const fd = new FormData();
     fd.append("file", file, file.name);
-    const r = await fetch("/api/extract", { method: "POST", body: fd });
+    const base = await apiBase();
+    const r = await fetch(base + "/extract", { method: "POST", body: fd });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.detail || data.error || `読み取りに失敗しました (${r.status})`);
     S.quote = data.quote;
@@ -370,7 +387,8 @@ async function doSelect() {
   try {
     S.quote = collectQuote();
     if (!S.cases.length) {
-      const r = await fetch("/api/cases");
+      const base = await apiBase();
+      const r = await fetch(base + "/cases");
       S.cases = (await r.json()).cases;
     }
     const data = await apiJson("/api/select", { quote: S.quote });
@@ -431,7 +449,8 @@ async function loadCandidates(idx, key, currentUrl) {
   const sel = document.getElementById("cand" + idx);
   if (!sel) return;
   try {
-    const r = await fetch("/api/candidates?key=" + encodeURIComponent(key));
+    const base = await apiBase();
+    const r = await fetch(base + "/candidates?key=" + encodeURIComponent(key));
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || "候補を取得できませんでした");
     S.resolved[idx]._candidates = data.candidates;
@@ -446,7 +465,8 @@ async function changeCategory(idx, key) {
   const sel = document.getElementById("cand" + idx);
   sel.innerHTML = `<option>読み込み中…</option>`;
   try {
-    const r = await fetch("/api/candidates?key=" + encodeURIComponent(key));
+    const base = await apiBase();
+    const r = await fetch(base + "/candidates?key=" + encodeURIComponent(key));
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || "候補を取得できませんでした");
     const first = data.candidates[0];
@@ -481,7 +501,8 @@ async function doGenerate() {
   note("msg3", "", "");
   try {
     const clean = S.resolved.map(r => { const c = { ...r }; delete c._candidates; return c; });
-    const res = await fetch("/api/generate", {
+    const base = await apiBase();
+    const res = await fetch(base + "/generate", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ quote: S.quote, resolved: clean }),
     });
