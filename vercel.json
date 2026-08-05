@@ -4,5 +4,16 @@
       "maxDuration": 60,
       "includeFiles": "{src,data}/**"
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/(index.html)?",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ]
 }
