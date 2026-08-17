@@ -127,6 +127,46 @@ def test_same_category_twice_with_only_one_candidate(monkeypatch):
     assert resolved[1]["is_individual"] is False
 
 
+def test_second_category_is_pulled_into_the_first(monkeypatch):
+    """1 件目のカテゴリーで 2 件まかなえるなら、商材違いの 2 件目は採用しない。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
+    cases = {
+        "accordion_garage_list": {"name": "アコーディオンガレージ 事例一覧", "url": "https://08tent.co.jp/?post_type=works&s=%E3%82%A2"},
+        "parking_garage_list": {"name": "駐車場・車庫 事例一覧", "url": "https://08tent.co.jp/works_kw/parking-garage/"},
+    }
+    selection = {"selected": ["accordion_garage_list", "parking_garage_list"], "reasons": {}}
+    resolved = rc.resolve_selection(QUOTE, selection, cases)
+    assert [r["key"] for r in resolved] == ["accordion_garage_list", "accordion_garage_list"]
+    assert resolved[0]["url"] != resolved[1]["url"]
+
+
+def test_second_category_kept_when_first_has_only_one_case(monkeypatch):
+    """1 件目が 1 件しか出せないときは、Claude が選んだ 2 件目をそのまま使う。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES[:1])
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
+    cases = {
+        "kaihei_tent_list": {"name": "開閉式テント 事例一覧", "url": "https://08tent.co.jp/works_kw/kaihei-tent/"},
+        "awning_list": {"name": "オーニング 事例一覧", "url": "https://08tent.co.jp/works_kw/awning-tent/"},
+    }
+    selection = {"selected": ["kaihei_tent_list", "awning_list"], "reasons": {}}
+    resolved = rc.resolve_selection(QUOTE, selection, cases)
+    assert [r["key"] for r in resolved] == ["kaihei_tent_list", "awning_list"]
+
+
+def test_second_category_kept_when_first_is_not_a_list(monkeypatch):
+    """1 件目が製品ページなら中身が 1 件なので、2 件目はそのまま残す。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
+    cases = {
+        "warehouse": {"name": "コンテナ保管・テント倉庫", "url": "https://08tent.co.jp/products/warehouse/"},
+        "tent_souko_list": {"name": "テント倉庫 事例一覧", "url": "https://08tent.co.jp/works_kw/tent-souko/"},
+    }
+    selection = {"selected": ["warehouse", "tent_souko_list"], "reasons": {}}
+    resolved = rc.resolve_selection(QUOTE, selection, cases)
+    assert [r["key"] for r in resolved] == ["warehouse", "tent_souko_list"]
+
+
 def test_category_candidates_for_list(monkeypatch):
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
     case = {"name": "荷捌き場テント一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}

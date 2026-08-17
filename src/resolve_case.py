@@ -181,11 +181,37 @@ def make_resolved_from_candidate(case_key: str, case: dict, candidate: dict, man
     }
 
 
+def _prefer_same_category(selected: list, cases: dict) -> list:
+    """1 件目のカテゴリーで 2 件まかなえるなら、2 件目も同じカテゴリーに寄せる。
+
+    商材の違う事例が 2 件目に並ぶと提案として弱くなる
+    （例: アコーディオンガレージの見積に固定式の駐車場屋根テントが付く）。
+    Claude への指示だけでは別カテゴリーが混ざることがあるため、ここで確定させる。
+
+    1 件目が一覧ページでない、または個別事例が 1 件しか取れない場合は、
+    Claude が選んだ 2 件目をそのまま使う。
+    """
+    keys = list(selected)
+    if len(keys) < 2 or keys[0] == keys[1]:
+        return keys
+
+    first = cases.get(keys[0])
+    if not first or not is_list_url(first["url"]):
+        return keys
+    if len(fetch_case_list(first["url"])) < 2:
+        return keys
+
+    keys[1] = keys[0]
+    return keys
+
+
 def resolve_selection(quote: dict, selection: dict, cases: dict) -> list:
     """select_cases の結果を受け取り、各カテゴリーの個別事例を解決したリストを返す。"""
+    keys = _prefer_same_category(selection.get("selected", []), cases)
+
     resolved = []
     used_urls = set()
-    for key in selection.get("selected", []):
+    for key in keys:
         case = cases.get(key)
         if not case:
             continue
