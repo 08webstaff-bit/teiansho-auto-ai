@@ -66,10 +66,20 @@ def test_validate_selection_rejects_unknown_key(cases):
         validate_selection(result, cases)
 
 
-def test_validate_selection_dedupes(cases):
+def test_validate_selection_dedupes_non_list_category(cases):
+    """製品ページは中身が 1 件しかないので、重複させると同じ事例が 2 枚並ぶ。"""
     result = {"selected": ["warehouse", "warehouse"]}
     with pytest.raises(ValueError):
         validate_selection(result, cases)
+
+
+def test_validate_selection_allows_same_list_category_twice(cases):
+    """一覧カテゴリーは 2 回選べる。商材違いの事例を無理に 2 件目に出さないため。"""
+    result = {"selected": ["accordion_garage_list", "accordion_garage_list"]}
+    assert validate_selection(result, cases) == [
+        "accordion_garage_list",
+        "accordion_garage_list",
+    ]
 
 
 def test_validate_selection_truncates_to_two(cases):

@@ -73,8 +73,11 @@ def _pick_index(quote: dict, category_name: str, candidates: list) -> dict:
     return json.loads(text)
 
 
-def resolve_individual_case(quote: dict, case_key: str, case: dict) -> dict:
+def resolve_individual_case(quote: dict, case_key: str, case: dict, exclude_urls=()) -> dict:
     """1 つのカテゴリーについて、個別事例を解決して返す。
+
+    exclude_urls に既出の事例 URL を渡すと、それらを候補から除いて選ぶ。
+    同じカテゴリーが 2 回選ばれたときに同じ事例が 2 枚並ぶのを防ぐ。
 
     戻り値: {
       "key": case_key,
@@ -105,9 +108,9 @@ def resolve_individual_case(quote: dict, case_key: str, case: dict) -> dict:
         base["resolved"] = True
         return base
 
-    candidates = fetch_case_list(case["url"])
+    candidates = [c for c in fetch_case_list(case["url"]) if c["url"] not in exclude_urls]
     if not candidates:
-        # スクレイピング失敗 → カテゴリー一覧 URL のままフォールバック
+        # スクレイピング失敗（または候補を出し尽くした）→ カテゴリー一覧 URL のまま
         return base
 
     try:
@@ -181,12 +184,14 @@ def make_resolved_from_candidate(case_key: str, case: dict, candidate: dict, man
 def resolve_selection(quote: dict, selection: dict, cases: dict) -> list:
     """select_cases の結果を受け取り、各カテゴリーの個別事例を解決したリストを返す。"""
     resolved = []
+    used_urls = set()
     for key in selection.get("selected", []):
         case = cases.get(key)
         if not case:
             continue
-        result = resolve_individual_case(quote, key, case)
+        result = resolve_individual_case(quote, key, case, exclude_urls=used_urls)
         # カテゴリー選定理由（一覧レベル）も保持
         result["category_reason"] = selection.get("reasons", {}).get(key, "")
+        used_urls.add(result["url"])
         resolved.append(result)
     return resolved

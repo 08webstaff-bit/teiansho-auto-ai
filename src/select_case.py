@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from .llm import MODEL, get_client
+from .scrape import is_list_url
 
 CASES_PATH = Path(__file__).resolve().parent.parent / "data" / "cases.json"
 
@@ -29,6 +30,10 @@ SYSTEM_PROMPT = (
     "あなたは丸八テント商会のベテラン営業兼プランナーです。"
     "見積内容を分析し、提示された事例キー一覧の中から最適な事例キーを 2 つ選んでください。"
     "キー以外の文字列や URL は絶対に出力しないでください。"
+    "見積内容に本当に合致するカテゴリーが 1 つしかない場合は、"
+    "無理に別カテゴリーを 2 つめに選ばず、同じキーを 2 回選んでください。"
+    "同じキーを 2 回選んだ場合は、そのカテゴリー内の別々の施工事例が自動で割り当てられます。"
+    "商材が違う事例を 2 件目に出すより、同じ商材の事例を 2 件見せるほうが提案として有効です。"
     "ぴったり該当する事例がない場合は、カテゴリの近い products ページのキーを選んでください。"
     "各キーの選定理由は、営業担当が顧客に説明できるよう日本語 1〜2 文で書いてください。"
 )
@@ -102,17 +107,25 @@ def _build_user_prompt(quote: dict, cases: dict) -> str:
 
 
 def validate_selection(result: dict, cases: dict) -> list:
-    """選定結果を検証し、有効なキーのリスト（重複除去）を返す。2 件未満なら ValueError。
+    """選定結果を検証し、有効なキーのリストを返す。2 件未満なら ValueError。
 
     result["selected"] はキー文字列のリスト、または {key, reason} の dict の
     リストのどちらでも受け付ける。
+
+    一覧ページのカテゴリーは同じキーを 2 回選んでよい。中に複数の個別事例があり、
+    resolve_case が別々の事例を割り当てるため。逆に一覧ページ以外（個別事例・
+    製品ページ）は中身が 1 件しかないので、重複させると同じ事例が 2 枚並んでしまう。
+    そのため後者だけ従来どおり重複を除去する。
     """
     selected = result.get("selected") or []
     valid = []
     for entry in selected:
         key = entry.get("key") if isinstance(entry, dict) else entry
-        if key in cases and key not in valid:
-            valid.append(key)
+        if key not in cases:
+            continue
+        if key in valid and not is_list_url(cases[key]["url"]):
+            continue
+        valid.append(key)
     if len(valid) < 2:
         raise ValueError(f"有効な事例キーが 2 件選定されませんでした: {selected}")
     return valid[:2]

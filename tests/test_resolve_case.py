@@ -91,6 +91,42 @@ def test_api_error_falls_back_to_first_candidate(monkeypatch):
     assert result["is_individual"] is True
 
 
+def test_exclude_urls_skips_already_used_case(monkeypatch):
+    """既出の事例は候補から外す（同じカテゴリーを 2 回選んだとき用）。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
+    # index 0 を選ぶ AI でも、除外済みなら残りから選ばれる
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "残りから"})
+    case = {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
+    result = rc.resolve_individual_case(
+        QUOTE, "nisabaki_tent_list", case, exclude_urls={"https://08tent.co.jp/works/83680/"}
+    )
+    assert result["url"] == "https://08tent.co.jp/works/83528/"
+
+
+def test_same_category_twice_resolves_to_different_cases(monkeypatch):
+    """同じカテゴリーが 2 回選ばれても、別々の事例になる。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
+    cases = {"nisabaki_tent_list": {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}}
+    selection = {"selected": ["nisabaki_tent_list", "nisabaki_tent_list"], "reasons": {}}
+    resolved = rc.resolve_selection(QUOTE, selection, cases)
+    assert len(resolved) == 2
+    assert resolved[0]["url"] != resolved[1]["url"]
+    assert resolved[0]["category_name"] == resolved[1]["category_name"]
+
+
+def test_same_category_twice_with_only_one_candidate(monkeypatch):
+    """候補を出し尽くしたら 2 件目は一覧ページにフォールバックする（重複させない）。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES[:1])
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
+    cases = {"nisabaki_tent_list": {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}}
+    selection = {"selected": ["nisabaki_tent_list", "nisabaki_tent_list"], "reasons": {}}
+    resolved = rc.resolve_selection(QUOTE, selection, cases)
+    assert resolved[0]["url"] == "https://08tent.co.jp/works/83680/"
+    assert resolved[1]["url"] == "https://08tent.co.jp/works_kw/nisabaki-tent/"
+    assert resolved[1]["is_individual"] is False
+
+
 def test_category_candidates_for_list(monkeypatch):
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
     case = {"name": "荷捌き場テント一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
