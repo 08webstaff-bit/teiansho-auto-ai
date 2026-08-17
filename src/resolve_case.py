@@ -13,7 +13,7 @@ URL 捏造防止:
 """
 
 from .llm import MODEL, get_client
-from .scrape import fetch_case_list, is_list_url
+from .scrape import fetch_case_list, fetch_page_thumbnail, is_list_url
 
 SYSTEM_PROMPT = (
     "あなたは丸八テント商会のベテラン営業です。"
@@ -98,8 +98,10 @@ def resolve_individual_case(quote: dict, case_key: str, case: dict) -> dict:
         "resolved": False,
     }
 
-    # 個別事例 / 製品ページはそのまま使う（スクレイピング対象外）
+    # 個別事例 / 製品ページはそのまま使う（スクレイピング対象外）。
+    # ただしサムネイルは持たないので、ページの og:image を代表画像として補う。
     if not is_list_url(case["url"]):
+        base["thumbnail"] = fetch_page_thumbnail(case["url"]) or None
         base["resolved"] = True
         return base
 
@@ -151,7 +153,13 @@ def category_candidates(case: dict) -> list:
         if cands:
             return cands
         return [{"url": case["url"], "title": f"{case['name']}（一覧ページ）", "thumbnail": None}]
-    return [{"url": case["url"], "title": case["name"], "thumbnail": None}]
+    return [
+        {
+            "url": case["url"],
+            "title": case["name"],
+            "thumbnail": fetch_page_thumbnail(case["url"]) or None,
+        }
+    ]
 
 
 def make_resolved_from_candidate(case_key: str, case: dict, candidate: dict, manual: bool = True) -> dict:

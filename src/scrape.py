@@ -13,7 +13,7 @@ import re
 import tempfile
 import time
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -49,8 +49,18 @@ CACHE_TTL_SEC = 60 * 60 * 24  # 24時間
 
 
 def is_list_url(url: str) -> bool:
-    """スクレイピング対象（カテゴリー一覧ページ）かどうか。"""
-    return "/works_kw/" in url
+    """スクレイピング対象（複数の個別事例が並ぶページ）かどうか。
+
+    対象は 2 種類:
+    - カテゴリー一覧ページ（/works_kw/～）
+    - 施工事例の検索結果ページ（?post_type=works&s=キーワード）
+      works_kw のカテゴリーが用意されていない商材（アコーディオンガレージ等）を
+      拾うために使う。どちらも中身は /works/数字/ のリンクなので同じパーサーで扱える。
+    """
+    if "/works_kw/" in url:
+        return True
+    query = parse_qs(urlparse(url).query)
+    return query.get("post_type") == ["works"] and bool(query.get("s"))
 
 
 def _cache_path(list_url: str) -> Path:
@@ -123,6 +133,27 @@ def parse_case_list(html: str, base_url: str) -> list:
                 entry["title"] = text
 
     return [by_url[u] for u in order if by_url[u]["title"]]
+
+
+def fetch_page_thumbnail(page_url: str) -> str:
+    """個別事例ページ／製品ページの代表画像（og:image）を 1 枚返す。取得できなければ空文字。
+
+    一覧ページ由来の事例はサムネイルが取れるが、cases.json に直接登録された
+    /works/数字/ や /products/～ はサムネイルを持たないため、画面で写真が出ない。
+    その穴を埋めるために使う。
+    """
+    if not page_url:
+        return ""
+    try:
+        resp = requests.get(page_url, headers=HEADERS, timeout=20)
+        resp.raise_for_status()
+    except Exception:
+        return ""
+
+    og = BeautifulSoup(resp.text, "html.parser").find("meta", property="og:image")
+    if og and og.get("content"):
+        return urljoin(page_url, og["content"])
+    return ""
 
 
 def _case_number(case_url: str) -> str:

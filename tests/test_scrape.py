@@ -26,6 +26,28 @@ def test_is_list_url():
     assert not is_list_url("https://08tent.co.jp/products/warehouse/")
 
 
+def test_is_list_url_accepts_works_search():
+    """施工事例の検索結果ページも個別事例が並ぶので一覧として扱う。"""
+    assert is_list_url(
+        "https://08tent.co.jp/?post_type=works&works_list=&s=%E3%82%A2%E3%82%B3"
+        "%E3%83%BC%E3%83%87%E3%82%A3%E3%82%AA%E3%83%B3%E3%82%AC%E3%83%AC%E3%83%BC%E3%82%B8"
+        "&vkfs_form_id=59148"
+    )
+    # 検索語なし・他ポストタイプの検索は対象外
+    assert not is_list_url("https://08tent.co.jp/?post_type=works&works_list=&s=")
+    assert not is_list_url("https://08tent.co.jp/?post_type=post&s=テント")
+    assert not is_list_url("https://08tent.co.jp/?s=テント")
+
+
+def test_parse_case_list_handles_search_result_page():
+    """検索結果ページも works_kw と同じパーサーで個別事例を抜き出せる。"""
+    search_url = "https://08tent.co.jp/?post_type=works&s=%E3%82%A2%E3%82%B3"
+    cases = parse_case_list(SAMPLE_HTML, search_url)
+    assert len(cases) == 2
+    for c in cases:
+        assert c["url"].startswith("https://08tent.co.jp/works/")
+
+
 def test_parse_case_list_extracts_individual_cases():
     cases = parse_case_list(SAMPLE_HTML, "https://08tent.co.jp/works_kw/nisabaki-tent/")
     assert len(cases) == 2

@@ -16,13 +16,24 @@ def cases():
     return load_cases()
 
 
-def test_cases_json_has_28_entries(cases):
-    assert len(cases) == 28
+def test_cases_json_has_29_entries(cases):
+    assert len(cases) == 29
 
 
 def test_all_case_urls_are_whitelisted_domain(cases):
     for key, case in cases.items():
         assert case["url"].startswith("https://08tent.co.jp/"), key
+
+
+def test_accordion_garage_is_registered_and_scrapable(cases):
+    """アコーディオン式ガレージは parking_garage_list に 1 件も無いため専用エントリが要る。"""
+    from src.scrape import is_list_url
+
+    case = cases["accordion_garage_list"]
+    assert "アコーディオン" in case["name"]
+    assert "アコーディオン" in case["keywords"]
+    # 検索結果ページなので、スクレイピング対象として認識される必要がある
+    assert is_list_url(case["url"])
 
 
 def test_schema_enum_matches_case_keys(cases):

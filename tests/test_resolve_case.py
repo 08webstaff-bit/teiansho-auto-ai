@@ -12,6 +12,12 @@ CANDIDATES = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def no_network_thumbnail(monkeypatch):
+    """og:image 取得は既定でモックし、テストがネットワークに出ないようにする。"""
+    monkeypatch.setattr(rc, "fetch_page_thumbnail", lambda url: "")
+
+
 def test_non_list_case_used_as_is(monkeypatch):
     # 個別事例 URL（works/数字）はスクレイピングせずそのまま使う
     case = {"name": "工場間通路テント（常設）", "url": "https://08tent.co.jp/works/58612/"}
@@ -26,6 +32,22 @@ def test_products_page_used_as_is():
     result = rc.resolve_individual_case(QUOTE, "event_temporary", case)
     assert result["url"] == "https://08tent.co.jp/products/temporary-tent/"
     assert result["is_individual"] is False
+
+
+def test_non_list_case_gets_thumbnail_from_og_image(monkeypatch):
+    """一覧ページ以外はサムネイルを持たないので og:image で補う（画面で写真が出るように）。"""
+    monkeypatch.setattr(rc, "fetch_page_thumbnail", lambda url: "https://08tent.co.jp/og.jpg")
+    case = {"name": "ファーラー（巻取り式）", "url": "https://08tent.co.jp/works/41672/"}
+    result = rc.resolve_individual_case(QUOTE, "commercial_furler", case)
+    assert result["thumbnail"] == "https://08tent.co.jp/og.jpg"
+
+
+def test_non_list_case_thumbnail_none_when_og_image_missing():
+    """og:image が取れなくても処理は止めず、サムネイル無しで続行する。"""
+    case = {"name": "ファーラー（巻取り式）", "url": "https://08tent.co.jp/works/41672/"}
+    result = rc.resolve_individual_case(QUOTE, "commercial_furler", case)
+    assert result["thumbnail"] is None
+    assert result["resolved"] is True
 
 
 def test_list_case_resolves_to_scraped_individual(monkeypatch):
@@ -77,11 +99,14 @@ def test_category_candidates_for_list(monkeypatch):
     assert cands[0]["url"] == "https://08tent.co.jp/works/83680/"
 
 
-def test_category_candidates_for_individual_page():
+def test_category_candidates_for_individual_page(monkeypatch):
+    monkeypatch.setattr(rc, "fetch_page_thumbnail", lambda url: "https://08tent.co.jp/og.jpg")
     case = {"name": "工場間通路テント", "url": "https://08tent.co.jp/works/58612/"}
     cands = rc.category_candidates(case)
     assert len(cands) == 1
     assert cands[0]["url"] == "https://08tent.co.jp/works/58612/"
+    # 選び直しの候補にも写真が付く
+    assert cands[0]["thumbnail"] == "https://08tent.co.jp/og.jpg"
 
 
 def test_category_candidates_scrape_failure_returns_list_page(monkeypatch):

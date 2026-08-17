@@ -327,6 +327,11 @@ async function doExtract() {
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.detail || data.error || `読み取りに失敗しました (${r.status})`);
     S.quote = data.quote;
+    // 前の見積書の事例・提案書が残ったままだと別の顧客の提案書を
+    // 誤ってダウンロードしてしまうため、読み取り成功時に必ず消す
+    S.resolved = []; S.pptx = null;
+    ["sec3","sec4"].forEach(id => document.getElementById(id).classList.add("hide"));
+    ["msg3","msg4"].forEach(id => note(id, "", ""));
     renderQuote();
     document.getElementById("sec2").classList.remove("hide");
     step(2);
@@ -399,6 +404,9 @@ async function doSelect() {
     const data = await apiJson("/api/select", { quote: S.quote });
     S.resolved = data.resolved;
     S.pptx = null;
+    // 事例を選び直したら、前の事例で作った提案書は無効なので画面からも消す
+    document.getElementById("sec4").classList.add("hide");
+    note("msg4", "", "");
     note("msg3", data.selection.fallback ? "warn" : "ok",
       data.selection.fallback
         ? "AI による選定に失敗したため、業種別の標準事例を表示しています。必要に応じて選び直してください。"
