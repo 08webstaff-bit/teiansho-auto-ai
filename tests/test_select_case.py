@@ -16,8 +16,22 @@ def cases():
     return load_cases()
 
 
-def test_cases_json_has_29_entries(cases):
-    assert len(cases) == 29
+def test_cases_json_has_the_12_site_categories(cases):
+    """cases.json は 08tent.co.jp/works-top/ のカテゴリーと 1 対 1 で対応させる。"""
+    assert len(cases) == 12
+    assert set(cases) == {
+        "tent_souko", "kaihei_tent", "nisabaki_tent", "jabara_tent",
+        "partition", "small_tent", "parasol", "shade",
+        "design_tent", "awning", "hisashi_tent", "garage_tent",
+    }
+
+
+def test_all_categories_are_scrapable_list_pages(cases):
+    """全カテゴリーが一覧ページ。個別事例はスクレイピングで選べる必要がある。"""
+    from src.scrape import is_list_url
+
+    for key, case in cases.items():
+        assert is_list_url(case["url"]), key
 
 
 def test_all_case_urls_are_whitelisted_domain(cases):
@@ -25,15 +39,11 @@ def test_all_case_urls_are_whitelisted_domain(cases):
         assert case["url"].startswith("https://08tent.co.jp/"), key
 
 
-def test_accordion_garage_is_registered_and_scrapable(cases):
-    """アコーディオン式ガレージは parking_garage_list に 1 件も無いため専用エントリが要る。"""
-    from src.scrape import is_list_url
-
-    case = cases["accordion_garage_list"]
-    assert "アコーディオン" in case["name"]
+def test_garage_category_covers_accordion(cases):
+    """アコーディオン式ガレージはガレージテントのカテゴリー内にある（2 ページ目）。"""
+    case = cases["garage_tent"]
     assert "アコーディオン" in case["keywords"]
-    # 検索結果ページなので、スクレイピング対象として認識される必要がある
-    assert is_list_url(case["url"])
+    assert "アコーディオン" in case.get("note", "")
 
 
 def test_schema_enum_matches_case_keys(cases):
@@ -45,45 +55,40 @@ def test_schema_enum_matches_case_keys(cases):
 def test_validate_selection_accepts_key_reason_dicts(cases):
     result = {
         "selected": [
-            {"key": "factory_jabara_permanent", "reason": "常設ジャバラのため"},
-            {"key": "factory_jabara_temp", "reason": "仮設比較用"},
+            {"key": "jabara_tent", "reason": "伸縮式通路のため"},
+            {"key": "nisabaki_tent", "reason": "荷捌き用途の比較用"},
         ]
     }
-    assert validate_selection(result, cases) == [
-        "factory_jabara_permanent",
-        "factory_jabara_temp",
-    ]
+    assert validate_selection(result, cases) == ["jabara_tent", "nisabaki_tent"]
 
 
 def test_validate_selection_accepts_valid_keys(cases):
-    result = {"selected": ["warehouse", "event_temporary"]}
-    assert validate_selection(result, cases) == ["warehouse", "event_temporary"]
+    result = {"selected": ["tent_souko", "awning"]}
+    assert validate_selection(result, cases) == ["tent_souko", "awning"]
 
 
 def test_validate_selection_rejects_unknown_key(cases):
-    result = {"selected": ["warehouse", "fake_key_12345"]}
+    result = {"selected": ["tent_souko", "fake_key_12345"]}
     with pytest.raises(ValueError):
         validate_selection(result, cases)
 
 
-def test_validate_selection_dedupes_non_list_category(cases):
-    """製品ページは中身が 1 件しかないので、重複させると同じ事例が 2 枚並ぶ。"""
-    result = {"selected": ["warehouse", "warehouse"]}
+def test_validate_selection_dedupes_non_list_category():
+    """一覧ページ以外は中身が 1 件しかないので、重複させると同じ事例が 2 枚並ぶ。"""
+    only_page = {"solo": {"name": "単独ページ", "url": "https://08tent.co.jp/works/58612/"}}
+    result = {"selected": ["solo", "solo"]}
     with pytest.raises(ValueError):
-        validate_selection(result, cases)
+        validate_selection(result, only_page)
 
 
 def test_validate_selection_allows_same_list_category_twice(cases):
     """一覧カテゴリーは 2 回選べる。商材違いの事例を無理に 2 件目に出さないため。"""
-    result = {"selected": ["accordion_garage_list", "accordion_garage_list"]}
-    assert validate_selection(result, cases) == [
-        "accordion_garage_list",
-        "accordion_garage_list",
-    ]
+    result = {"selected": ["garage_tent", "garage_tent"]}
+    assert validate_selection(result, cases) == ["garage_tent", "garage_tent"]
 
 
 def test_validate_selection_truncates_to_two(cases):
-    result = {"selected": ["warehouse", "event_temporary", "event_one_touch"]}
+    result = {"selected": ["tent_souko", "awning", "parasol"]}
     assert len(validate_selection(result, cases)) == 2
 
 

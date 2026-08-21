@@ -12,6 +12,7 @@ import os
 import re
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import parse_qs, urljoin, urlparse
 
@@ -46,6 +47,9 @@ def _ensure_dir(path: Path) -> bool:
 WORKS_RE = re.compile(r"/works/\d+/?$")
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MaruhachiTeianBot/1.0)"}
 CACHE_TTL_SEC = 60 * 60 * 24  # 24時間
+LIST_MAX_PAGES = 12  # 一覧ページを辿る上限（現状の最大は 9 ページ）
+LIST_FETCH_WORKERS = 6  # ページ取得の並列数（Vercel の 60 秒上限に収めるため）
+PAGE_LINK_RE = re.compile(r"/page/(\d+)/")
 
 
 def is_list_url(url: str) -> bool:
@@ -68,11 +72,89 @@ def _cache_path(list_url: str) -> Path:
     return LIST_CACHE_DIR / f"{slug}.json"
 
 
+def page_url(list_url: str, page: int) -> str:
+    """一覧ページの N ページ目の URL を組み立てる。
+
+    カテゴリー一覧は /works_kw/slug/page/2/、検索結果は &paged=2 形式。
+    ここで作るのは一覧ページの URL だけで、個別事例 URL は組み立てない
+    （個別事例 URL は必ずページ内のリンクから取る）。
+    """
+    if page <= 1:
+        return list_url
+    if "/works_kw/" in list_url:
+        base = list_url if list_url.endswith("/") else list_url + "/"
+        return f"{base}page/{page}/"
+    sep = "&" if "?" in list_url else "?"
+    return f"{list_url}{sep}paged={page}"
+
+
+def _get_html(url: str):
+    """ページ HTML を返す。取得できなければ None（最終ページの次は 404 になる）。"""
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=20)
+        resp.raise_for_status()
+    except Exception:
+        return None
+    return resp.text
+
+
+def _last_page(html: str) -> int:
+    """一覧ページ内のページ送りリンクから最終ページ番号を読む。無ければ 1。"""
+    nums = [int(n) for n in PAGE_LINK_RE.findall(html)]
+    return min(max(nums), LIST_MAX_PAGES) if nums else 1
+
+
+def _fetch_all_pages(list_url: str) -> list:
+    """一覧の全ページから個別事例を集める（重複除去・ページ順）。
+
+    カテゴリー一覧は最終ページ番号が HTML から分かるので、2 ページ目以降は
+    並列に取得する（逐次だと 9 ページで 25 秒近くかかり、Vercel の
+    60 秒上限に対して余裕がなくなるため）。
+    """
+    first = _get_html(page_url(list_url, 1))
+    if first is None:
+        return []
+
+    cases = parse_case_list(first, list_url)
+    seen = {c["url"] for c in cases}
+
+    last = _last_page(first) if "/works_kw/" in list_url else 1
+    if last > 1:
+        pages = list(range(2, last + 1))
+        with ThreadPoolExecutor(max_workers=LIST_FETCH_WORKERS) as pool:
+            htmls = list(pool.map(lambda p: _get_html(page_url(list_url, p)), pages))
+        for page, html in zip(pages, htmls):
+            if not html:
+                continue
+            for case in parse_case_list(html, page_url(list_url, page)):
+                if case["url"] not in seen:
+                    seen.add(case["url"])
+                    cases.append(case)
+        return cases
+
+    # ページ番号が読めない形式（検索結果など）は、新着が無くなるまで逐次で辿る
+    for page in range(2, LIST_MAX_PAGES + 1):
+        url = page_url(list_url, page)
+        html = _get_html(url)
+        if not html:
+            break
+        added = [c for c in parse_case_list(html, url) if c["url"] not in seen]
+        if not added:
+            break
+        seen.update(c["url"] for c in added)
+        cases.extend(added)
+    return cases
+
+
 def fetch_case_list(list_url: str, use_cache: bool = True) -> list:
-    """一覧ページから個別事例のリストを返す。
+    """一覧ページから個別事例のリストを返す（全ページを辿る）。
 
     戻り値: [{"url": ..., "title": ..., "thumbnail": ...}, ...]（重複除去済み）
     取得に失敗した場合は空リストを返す（呼び出し側でフォールバック）。
+
+    1 ページ目だけだと新しい 20 件しか見えず、カテゴリー内の該当事例を
+    取りこぼす（例: 駐車場・車庫のアコーディオンガレージは 2 ページ目）。
+    そのため新しい事例が出てこなくなるまでページを辿る。
     """
     can_cache = _ensure_dir(LIST_CACHE_DIR)
     cache_file = _cache_path(list_url)
@@ -84,13 +166,10 @@ def fetch_case_list(list_url: str, use_cache: bool = True) -> list:
             except Exception:
                 pass
 
-    try:
-        resp = requests.get(list_url, headers=HEADERS, timeout=20)
-        resp.raise_for_status()
-    except Exception:
+    cases = _fetch_all_pages(list_url)
+    if not cases:
         return []
 
-    cases = parse_case_list(resp.text, list_url)
     try:
         cache_file.write_text(json.dumps(cases, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:

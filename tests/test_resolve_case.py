@@ -21,7 +21,7 @@ def no_network_thumbnail(monkeypatch):
 def test_non_list_case_used_as_is(monkeypatch):
     # 個別事例 URL（works/数字）はスクレイピングせずそのまま使う
     case = {"name": "工場間通路テント（常設）", "url": "https://08tent.co.jp/works/58612/"}
-    result = rc.resolve_individual_case(QUOTE, "factory_passage_permanent", case)
+    result = rc.resolve_individual_case(QUOTE, "jabara_tent", case)
     assert result["url"] == "https://08tent.co.jp/works/58612/"
     assert result["is_individual"] is False
     assert result["resolved"] is True
@@ -38,14 +38,14 @@ def test_non_list_case_gets_thumbnail_from_og_image(monkeypatch):
     """一覧ページ以外はサムネイルを持たないので og:image で補う（画面で写真が出るように）。"""
     monkeypatch.setattr(rc, "fetch_page_thumbnail", lambda url: "https://08tent.co.jp/og.jpg")
     case = {"name": "ファーラー（巻取り式）", "url": "https://08tent.co.jp/works/41672/"}
-    result = rc.resolve_individual_case(QUOTE, "commercial_furler", case)
+    result = rc.resolve_individual_case(QUOTE, "awning", case)
     assert result["thumbnail"] == "https://08tent.co.jp/og.jpg"
 
 
 def test_non_list_case_thumbnail_none_when_og_image_missing():
     """og:image が取れなくても処理は止めず、サムネイル無しで続行する。"""
     case = {"name": "ファーラー（巻取り式）", "url": "https://08tent.co.jp/works/41672/"}
-    result = rc.resolve_individual_case(QUOTE, "commercial_furler", case)
+    result = rc.resolve_individual_case(QUOTE, "awning", case)
     assert result["thumbnail"] is None
     assert result["resolved"] is True
 
@@ -53,10 +53,10 @@ def test_non_list_case_thumbnail_none_when_og_image_missing():
 def test_list_case_resolves_to_scraped_individual(monkeypatch):
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
     monkeypatch.setattr(
-        rc, "_pick_index", lambda q, name, c: {"index": 1, "reason": "大型トラック対応のため"}
+        rc, "_pick_index", lambda q, name, c, **kw: {"index": 1, "reason": "大型トラック対応のため"}
     )
     case = {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
-    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent_list", case)
+    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent", case)
     assert result["url"] == "https://08tent.co.jp/works/83528/"  # index 1
     assert result["is_individual"] is True
     assert result["reason"] == "大型トラック対応のため"
@@ -66,16 +66,16 @@ def test_list_case_resolves_to_scraped_individual(monkeypatch):
 def test_list_case_scrape_failure_falls_back_to_category(monkeypatch):
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: [])
     case = {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
-    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent_list", case)
+    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent", case)
     assert result["url"] == "https://08tent.co.jp/works_kw/nisabaki-tent/"
     assert result["is_individual"] is False
 
 
 def test_invalid_index_from_api_falls_back_to_first(monkeypatch):
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
-    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 99, "reason": "x"})
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 99, "reason": "x"})
     case = {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
-    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent_list", case)
+    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent", case)
     assert result["url"] == "https://08tent.co.jp/works/83680/"  # index 0 に補正
 
 
@@ -86,7 +86,7 @@ def test_api_error_falls_back_to_first_candidate(monkeypatch):
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
     monkeypatch.setattr(rc, "_pick_index", boom)
     case = {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
-    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent_list", case)
+    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent", case)
     assert result["url"] == "https://08tent.co.jp/works/83680/"
     assert result["is_individual"] is True
 
@@ -95,10 +95,10 @@ def test_exclude_urls_skips_already_used_case(monkeypatch):
     """既出の事例は候補から外す（同じカテゴリーを 2 回選んだとき用）。"""
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
     # index 0 を選ぶ AI でも、除外済みなら残りから選ばれる
-    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "残りから"})
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 0, "reason": "残りから"})
     case = {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
     result = rc.resolve_individual_case(
-        QUOTE, "nisabaki_tent_list", case, exclude_urls={"https://08tent.co.jp/works/83680/"}
+        QUOTE, "nisabaki_tent", case, exclude_urls={"https://08tent.co.jp/works/83680/"}
     )
     assert result["url"] == "https://08tent.co.jp/works/83528/"
 
@@ -106,9 +106,9 @@ def test_exclude_urls_skips_already_used_case(monkeypatch):
 def test_same_category_twice_resolves_to_different_cases(monkeypatch):
     """同じカテゴリーが 2 回選ばれても、別々の事例になる。"""
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
-    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
-    cases = {"nisabaki_tent_list": {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}}
-    selection = {"selected": ["nisabaki_tent_list", "nisabaki_tent_list"], "reasons": {}}
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 0, "reason": "最も近い"})
+    cases = {"nisabaki_tent": {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}}
+    selection = {"selected": ["nisabaki_tent", "nisabaki_tent"], "reasons": {}}
     resolved = rc.resolve_selection(QUOTE, selection, cases)
     assert len(resolved) == 2
     assert resolved[0]["url"] != resolved[1]["url"]
@@ -118,9 +118,9 @@ def test_same_category_twice_resolves_to_different_cases(monkeypatch):
 def test_same_category_twice_with_only_one_candidate(monkeypatch):
     """候補を出し尽くしたら 2 件目は一覧ページにフォールバックする（重複させない）。"""
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES[:1])
-    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
-    cases = {"nisabaki_tent_list": {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}}
-    selection = {"selected": ["nisabaki_tent_list", "nisabaki_tent_list"], "reasons": {}}
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 0, "reason": "最も近い"})
+    cases = {"nisabaki_tent": {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}}
+    selection = {"selected": ["nisabaki_tent", "nisabaki_tent"], "reasons": {}}
     resolved = rc.resolve_selection(QUOTE, selection, cases)
     assert resolved[0]["url"] == "https://08tent.co.jp/works/83680/"
     assert resolved[1]["url"] == "https://08tent.co.jp/works_kw/nisabaki-tent/"
@@ -130,41 +130,41 @@ def test_same_category_twice_with_only_one_candidate(monkeypatch):
 def test_second_category_is_pulled_into_the_first(monkeypatch):
     """1 件目のカテゴリーで 2 件まかなえるなら、商材違いの 2 件目は採用しない。"""
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
-    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 0, "reason": "最も近い"})
     cases = {
-        "accordion_garage_list": {"name": "アコーディオンガレージ 事例一覧", "url": "https://08tent.co.jp/?post_type=works&s=%E3%82%A2"},
-        "parking_garage_list": {"name": "駐車場・車庫 事例一覧", "url": "https://08tent.co.jp/works_kw/parking-garage/"},
+        "garage_tent": {"name": "ガレージテント", "url": "https://08tent.co.jp/works_kw/parking-garage/"},
+        "hisashi_tent": {"name": "庇テント・軒先テント", "url": "https://08tent.co.jp/works_kw/hisashi-tent/"},
     }
-    selection = {"selected": ["accordion_garage_list", "parking_garage_list"], "reasons": {}}
+    selection = {"selected": ["garage_tent", "hisashi_tent"], "reasons": {}}
     resolved = rc.resolve_selection(QUOTE, selection, cases)
-    assert [r["key"] for r in resolved] == ["accordion_garage_list", "accordion_garage_list"]
+    assert [r["key"] for r in resolved] == ["garage_tent", "garage_tent"]
     assert resolved[0]["url"] != resolved[1]["url"]
 
 
 def test_second_category_kept_when_first_has_only_one_case(monkeypatch):
     """1 件目が 1 件しか出せないときは、Claude が選んだ 2 件目をそのまま使う。"""
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES[:1])
-    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 0, "reason": "最も近い"})
     cases = {
-        "kaihei_tent_list": {"name": "開閉式テント 事例一覧", "url": "https://08tent.co.jp/works_kw/kaihei-tent/"},
-        "awning_list": {"name": "オーニング 事例一覧", "url": "https://08tent.co.jp/works_kw/awning-tent/"},
+        "kaihei_tent": {"name": "開閉式テント 事例一覧", "url": "https://08tent.co.jp/works_kw/kaihei-tent/"},
+        "awning": {"name": "オーニング 事例一覧", "url": "https://08tent.co.jp/works_kw/awning-tent/"},
     }
-    selection = {"selected": ["kaihei_tent_list", "awning_list"], "reasons": {}}
+    selection = {"selected": ["kaihei_tent", "awning"], "reasons": {}}
     resolved = rc.resolve_selection(QUOTE, selection, cases)
-    assert [r["key"] for r in resolved] == ["kaihei_tent_list", "awning_list"]
+    assert [r["key"] for r in resolved] == ["kaihei_tent", "awning"]
 
 
 def test_second_category_kept_when_first_is_not_a_list(monkeypatch):
-    """1 件目が製品ページなら中身が 1 件なので、2 件目はそのまま残す。"""
+    """1 件目が一覧ページでないなら中身が 1 件なので、2 件目はそのまま残す。"""
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
-    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "最も近い"})
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 0, "reason": "最も近い"})
     cases = {
-        "warehouse": {"name": "コンテナ保管・テント倉庫", "url": "https://08tent.co.jp/products/warehouse/"},
-        "tent_souko_list": {"name": "テント倉庫 事例一覧", "url": "https://08tent.co.jp/works_kw/tent-souko/"},
+        "solo_page": {"name": "単独の施工事例ページ", "url": "https://08tent.co.jp/works/58612/"},
+        "tent_souko": {"name": "テント倉庫 事例一覧", "url": "https://08tent.co.jp/works_kw/tent-souko/"},
     }
-    selection = {"selected": ["warehouse", "tent_souko_list"], "reasons": {}}
+    selection = {"selected": ["solo_page", "tent_souko"], "reasons": {}}
     resolved = rc.resolve_selection(QUOTE, selection, cases)
-    assert [r["key"] for r in resolved] == ["warehouse", "tent_souko_list"]
+    assert [r["key"] for r in resolved] == ["solo_page", "tent_souko"]
 
 
 def test_category_candidates_for_list(monkeypatch):
@@ -195,7 +195,7 @@ def test_category_candidates_scrape_failure_returns_list_page(monkeypatch):
 
 def test_make_resolved_from_candidate_manual():
     case = {"name": "荷捌き場テント一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
-    r = rc.make_resolved_from_candidate("nisabaki_tent_list", case, CANDIDATES[1], manual=True)
+    r = rc.make_resolved_from_candidate("nisabaki_tent", case, CANDIDATES[1], manual=True)
     assert r["url"] == "https://08tent.co.jp/works/83528/"
     assert r["is_individual"] is True
     assert "手動" in r["reason"]
@@ -204,20 +204,48 @@ def test_make_resolved_from_candidate_manual():
 def test_make_resolved_from_candidate_individual_page():
     case = {"name": "工場間通路テント", "url": "https://08tent.co.jp/works/58612/"}
     cand = {"url": "https://08tent.co.jp/works/58612/", "title": "工場間通路テント", "thumbnail": None}
-    r = rc.make_resolved_from_candidate("factory_passage_permanent", case, cand)
+    r = rc.make_resolved_from_candidate("jabara_tent", case, cand)
     assert r["is_individual"] is False
 
 
 def test_resolve_selection_all_urls_are_real(monkeypatch):
     monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
-    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c: {"index": 0, "reason": "r"})
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 0, "reason": "r"})
     cases = {
-        "nisabaki_tent_list": {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"},
-        "factory_passage_permanent": {"name": "工場間通路テント", "url": "https://08tent.co.jp/works/58612/"},
+        "nisabaki_tent": {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"},
+        "jabara_tent": {"name": "工場間通路テント", "url": "https://08tent.co.jp/works/58612/"},
     }
-    selection = {"selected": ["nisabaki_tent_list", "factory_passage_permanent"], "reasons": {}}
+    selection = {"selected": ["nisabaki_tent", "jabara_tent"], "reasons": {}}
     resolved = rc.resolve_selection(QUOTE, selection, cases)
     assert len(resolved) == 2
     for r in resolved:
         assert r["url"].startswith("https://08tent.co.jp/")
         assert "/works_kw/" not in r["url"]  # 一覧 URL は最終提示に残らない
+
+
+def test_second_case_is_told_to_match_the_first(monkeypatch):
+    """カテゴリーが広いので、2 件目には 1 件目と同じ商材を選ぶよう指示する。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
+    seen = []
+
+    def spy(quote, name, cands, similar_to=""):
+        seen.append(similar_to)
+        return {"index": 0, "reason": "最も近い"}
+
+    monkeypatch.setattr(rc, "_pick_index", spy)
+    cases = {"garage_tent": {"name": "ガレージテント", "url": "https://08tent.co.jp/works_kw/parking-garage/"}}
+    selection = {"selected": ["garage_tent", "garage_tent"], "reasons": {}}
+    rc.resolve_selection(QUOTE, selection, cases)
+    assert seen[0] == ""                       # 1 件目は指示なし
+    assert seen[1] == CANDIDATES[0]["title"]   # 2 件目は 1 件目のタイトルを渡す
+
+
+def test_similar_to_appears_in_the_prompt():
+    prompt = rc._build_prompt(QUOTE, "ガレージテント", CANDIDATES, similar_to="アコーディオンガレージを個人邸に新設")
+    assert "アコーディオンガレージを個人邸に新設" in prompt
+    assert "同じ商材" in prompt
+
+
+def test_prompt_has_no_similarity_note_for_the_first_case():
+    prompt = rc._build_prompt(QUOTE, "ガレージテント", CANDIDATES)
+    assert "参考事例 1 として" not in prompt

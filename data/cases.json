@@ -1,153 +1,64 @@
 {
-  "event_big_one_touch": {
-    "name": "大型ワンタッチテント（4m×4m・5m×5m）",
-    "url": "https://08tent.co.jp/products/temporary-tent/big-one-touch/",
-    "keywords": ["大型", "キャスター付き", "4m", "5m", "ワンタッチ 大型"],
-    "note": "「キャスター付き」「大型」の要望がある場合はこちら"
-  },
-  "event_one_touch": {
-    "name": "ワンタッチテント（通常サイズ・かんたんてんと等）",
-    "url": "https://08tent.co.jp/products/temporary-tent/one-touch/",
-    "keywords": ["ワンタッチ", "かんたんてんと", "イベントテント"]
-  },
-  "event_temporary": {
-    "name": "イベント用・仮設テント全般",
-    "url": "https://08tent.co.jp/products/temporary-tent/",
-    "keywords": ["イベント", "仮設", "催事"]
-  },
-  "factory_jabara_temp": {
-    "name": "屋内ジャバラブース（仮設・レール無）",
-    "url": "https://08tent.co.jp/works/68664/",
-    "keywords": ["ジャバラ", "屋内ブース", "仮設", "レール無"]
-  },
-  "factory_jabara_permanent": {
-    "name": "屋内ジャバラブース（常設・レール有）",
-    "url": "https://08tent.co.jp/works/39281/",
-    "keywords": ["ジャバラ", "常設", "レール有"]
-  },
-  "factory_jabara_embedded": {
-    "name": "屋内ジャバラブース（埋込レール・H高）",
-    "url": "https://08tent.co.jp/works/64497/",
-    "keywords": ["ジャバラ", "埋込レール", "高さH"]
-  },
-  "factory_passage_temp": {
-    "name": "工場間通路テント（仮設・レール無）",
-    "url": "https://08tent.co.jp/works/64497/",
-    "keywords": ["通路テント", "工場間", "仮設"],
-    "note": "オプションでウェイト設置を必須提案すること"
-  },
-  "factory_passage_permanent": {
-    "name": "工場間通路テント（常設・レール有）",
-    "url": "https://08tent.co.jp/works/58612/",
-    "keywords": ["通路テント", "常設", "レール有"]
-  },
-  "warehouse": {
-    "name": "コンテナ保管・テント倉庫",
-    "url": "https://08tent.co.jp/products/warehouse/",
-    "keywords": ["倉庫", "コンテナ", "保管", "テント倉庫"]
-  },
-  "commercial_updown_shade": {
-    "name": "上下昇降シェード",
-    "url": "https://08tent.co.jp/works/51144/",
-    "keywords": ["上下昇降", "シェード", "商業施設"]
-  },
-  "commercial_furler": {
-    "name": "ファーラー（巻取り式）",
-    "url": "https://08tent.co.jp/works/41672/",
-    "keywords": ["ファーラー", "巻取り"]
-  },
-  "commercial_w_awning": {
-    "name": "ダブルオーニング",
-    "url": "https://08tent.co.jp/works/w-banne_jazzdream/",
-    "keywords": ["オーニング", "ダブルオーニング"]
-  },
-  "school_moving_mesh": {
-    "name": "園庭・プール開閉シェード（門型＋ワイヤー）",
-    "url": "https://08tent.co.jp/products/hiyoke/movingmesh/",
-    "keywords": ["開閉シェード", "門型", "ワイヤー", "園庭", "プール"]
-  },
-  "school_shade_garden": {
-    "name": "園庭開閉シェード（独立タイプ）",
-    "url": "https://08tent.co.jp/works/42692/",
-    "keywords": ["園庭", "独立タイプ", "幼稚園", "保育園"]
-  },
-  "school_shade_pool": {
-    "name": "プール開閉シェード（独立タイプ）",
-    "url": "https://08tent.co.jp/works/58971/",
-    "keywords": ["プール", "独立タイプ", "学校"]
-  },
-  "school_sandbox": {
-    "name": "砂場開閉テント",
-    "url": "https://08tent.co.jp/works/42692/",
-    "keywords": ["砂場", "開閉テント"]
-  },
-  "partition_curtain": {
-    "name": "間仕切りカーテン（透明ビニールカーテン・店舗バックヤード）",
-    "url": "https://08tent.co.jp/works/67770/",
-    "keywords": ["間仕切りカーテン", "間仕切カーテン", "ビニールカーテン", "透明カーテン", "温度管理", "防寒", "防塵", "防虫"]
-  },
-  "partition_list": {
-    "name": "シート間仕切り事例一覧（間仕切りカーテン・ビニールカーテン・シートシャッター等）",
-    "url": "https://08tent.co.jp/works_kw/partition/",
-    "keywords": ["間仕切り", "シート間仕切り", "間仕切りカーテン", "ビニールカーテン", "シートシャッター", "ロールスクリーン", "アコーディオンドア", "工場", "倉庫"],
-    "note": "間仕切り系で個別事例が合わない場合はこちらの一覧ページを使う"
-  },
-  "tent_souko_list": {
-    "name": "テント倉庫 事例一覧（在庫保管・作業スペース拡張）",
+  "tent_souko": {
+    "name": "テント倉庫",
     "url": "https://08tent.co.jp/works_kw/tent-souko/",
-    "keywords": ["テント倉庫", "倉庫", "在庫保管", "作業スペース", "物流", "工場", "軽量", "短期施工"]
+    "keywords": ["テント倉庫", "倉庫", "在庫保管", "保管", "作業スペース", "物流", "工場", "軽量", "短期施工", "コンテナ"]
   },
-  "kaihei_tent_list": {
-    "name": "開閉式テント 事例一覧（屋根可動式・日よけ雨よけ換気）",
+  "kaihei_tent": {
+    "name": "開閉式テント",
     "url": "https://08tent.co.jp/works_kw/kaihei-tent/",
-    "keywords": ["開閉式テント", "屋根可動", "可動式", "開閉", "日よけ", "雨よけ", "換気", "テラス", "ルーフトップ"]
+    "keywords": ["開閉式", "開閉テント", "屋根可動式", "可動屋根", "上下昇降", "日よけ", "雨よけ", "換気", "園庭", "プール", "砂場", "テラス席"]
   },
-  "nisabaki_tent_list": {
-    "name": "荷捌き場テント 事例一覧（搬入出・一時保管の大型テント屋根）",
+  "nisabaki_tent": {
+    "name": "上屋テント・荷捌きテント",
     "url": "https://08tent.co.jp/works_kw/nisabaki-tent/",
-    "keywords": ["荷捌き", "荷捌き場", "荷さばき", "搬入", "搬出", "上屋", "片持ち", "トラック", "物流", "倉庫"]
+    "keywords": ["上屋テント", "上屋", "荷捌き", "荷捌き場", "搬入出", "一時保管", "大型テント屋根", "トラック", "片持ち", "工場", "倉庫"]
   },
-  "jabara_passage_list": {
-    "name": "ジャバラ通路 事例一覧（伸縮式通路テント）",
+  "jabara_tent": {
+    "name": "ジャバラ（伸縮式）テント",
     "url": "https://08tent.co.jp/works_kw/jabara/",
-    "keywords": ["ジャバラ", "じゃばら", "伸縮式", "通路テント", "可動式通路", "工場間通路", "アコーディオン"],
-    "note": "ジャバラ通路系で cases.json の個別事例が合わない場合の受け皿一覧"
+    "keywords": ["ジャバラ", "蛇腹", "伸縮", "伸縮式", "通路テント", "工場間", "屋内ブース", "レール", "常設", "仮設"],
+    "note": "仮設（レール無）を提案する場合は、オプションでウェイト設置を必ず提案すること"
   },
-  "small_tent_roof_list": {
-    "name": "小型テント屋根 事例一覧（発券機・EV充電・カート置き場等の設備保護）",
+  "partition": {
+    "name": "間仕切り（カーテン・壁）",
+    "url": "https://08tent.co.jp/works_kw/partition/",
+    "keywords": ["間仕切り", "間仕切カーテン", "間仕切りカーテン", "ビニールカーテン", "透明カーテン", "シートシャッター", "ロールスクリーン", "防塵", "防虫", "防寒", "温度管理", "バックヤード"]
+  },
+  "small_tent": {
+    "name": "小型テント屋根",
     "url": "https://08tent.co.jp/works_kw/small_tent/",
-    "keywords": ["小型テント", "テント屋根", "発券機", "精算機", "EV充電", "カート置き場", "自動販売機", "宅配ボックス", "設備"]
+    "keywords": ["小型テント屋根", "発券機", "精算機", "自販機", "EV充電", "カート置き場", "ゴミ置き場", "設備保護", "小型"]
   },
-  "parasol_list": {
-    "name": "パラソル 事例一覧（飲食店・商業施設・宿泊施設）",
+  "parasol": {
+    "name": "パラソル",
     "url": "https://08tent.co.jp/works_kw/parasol/",
-    "keywords": ["パラソル", "ハンギングパラソル", "スクエアパラソル", "カフェテラス", "飲食店", "テラス", "日よけ"]
+    "keywords": ["パラソル", "日傘", "飲食店", "テラス", "商業施設", "宿泊施設", "カフェ"]
   },
-  "shade_list": {
-    "name": "タープ・シェード 事例一覧（日除け・サンシェード）",
+  "shade": {
+    "name": "シェード・タープ",
     "url": "https://08tent.co.jp/works_kw/shade/",
-    "keywords": ["タープ", "シェード", "サンシェード", "日除け", "日よけ", "テラス", "保育園", "商業施設"]
+    "keywords": ["シェード", "タープ", "日除け", "日よけ", "サンシェード", "遮光", "遮熱", "膜"]
   },
-  "awning_list": {
-    "name": "オーニング 事例一覧（店舗・工場軒先の雨よけ日よけ・電動手動）",
+  "design_tent": {
+    "name": "デザイン性の高い事例",
+    "url": "https://08tent.co.jp/works_kw/design-tent/",
+    "keywords": ["デザイン", "デザイン性", "意匠", "意匠性", "ロゴ", "装飾", "店舗デザイン", "カラー", "外観"]
+  },
+  "awning": {
+    "name": "オーニング",
     "url": "https://08tent.co.jp/works_kw/awning-tent/",
-    "keywords": ["オーニング", "軒先", "雨よけ", "日よけ", "電動", "手動", "可動式屋根", "飲食店", "店舗"]
+    "keywords": ["オーニング", "軒先", "雨よけ", "日よけ", "電動", "手動", "巻取り", "ファーラー", "ダブルオーニング", "店舗", "飲食店"]
   },
-  "hisashi_tent_list": {
-    "name": "店舗用テント・庇テント 事例一覧（入口・窓上の固定式テント）",
+  "hisashi_tent": {
+    "name": "庇テント・軒先テント",
     "url": "https://08tent.co.jp/works_kw/hisashi-tent/",
-    "keywords": ["庇テント", "ひさし", "庇", "店舗テント", "店舗用テント", "入口テント", "固定式", "ロゴ", "デザイン"]
+    "keywords": ["庇テント", "軒先テント", "ひさし", "庇", "店舗テント", "店舗用テント", "入口テント", "窓上", "固定式"]
   },
-  "parking_garage_list": {
-    "name": "駐車場・車庫 事例一覧（駐車場屋根・ガレージ・車庫間仕切り）",
+  "garage_tent": {
+    "name": "ガレージテント",
     "url": "https://08tent.co.jp/works_kw/parking-garage/",
-    "keywords": ["駐車場", "車庫", "ガレージ", "カーポート", "駐車場屋根", "上屋", "車庫間仕切り", "防犯"],
-    "note": "屋根が固定式の駐車場テント・車庫。アコーディオン式（伸縮開閉するテントガレージ）は accordion_garage_list を使うこと"
-  },
-  "accordion_garage_list": {
-    "name": "アコーディオンガレージ 事例一覧（伸縮式テントガレージ・簡易車庫）",
-    "url": "https://08tent.co.jp/?post_type=works&works_list=&s=%E3%82%A2%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%82%AA%E3%83%B3%E3%82%AC%E3%83%AC%E3%83%BC%E3%82%B8&vkfs_form_id=59148",
-    "keywords": ["アコーディオン", "アコーディオンガレージ", "アコーディオンテント", "伸縮", "伸縮式", "テントガレージ", "ガレージテント", "簡易車庫", "蛇腹", "個人邸", "カーポート内", "愛車", "レール"],
-    "note": "自動車用アコーディオン式（伸縮開閉）ガレージ。ガレージテント本体・レール・裾下スカート・後ろファスナー等の明細があればこちら"
+    "keywords": ["ガレージ", "ガレージテント", "駐車場", "車庫", "カーポート", "駐車場屋根", "車庫間仕切り", "アコーディオン", "アコーディオンガレージ", "伸縮式ガレージ", "簡易車庫", "個人邸", "愛車"],
+    "note": "アコーディオン式（伸縮開閉）ガレージもこのカテゴリーに含まれる。ガレージテント本体・レール・裾下スカート・後ろファスナー等の明細があればアコーディオン式"
   }
 }

@@ -22,7 +22,7 @@ SYSTEM_PROMPT = (
 )
 
 
-def _build_prompt(quote: dict, category_name: str, candidates: list) -> str:
+def _build_prompt(quote: dict, category_name: str, candidates: list, similar_to: str = "") -> str:
     item_lines = [
         f"- {it.get('name', '')} | 仕様: {it.get('spec', '')} | 数量: {it.get('quantity', '')}"
         for it in quote.get("items", [])
@@ -36,11 +36,18 @@ def _build_prompt(quote: dict, category_name: str, candidates: list) -> str:
         f"見積項目:\n" + ("\n".join(item_lines) or "（明細なし）") + "\n\n"
         f"## カテゴリー「{category_name}」の施工事例候補\n"
         + "\n".join(cand_lines)
+        + (
+            "\n\n参考事例 1 として「" + similar_to + "」を既に選んでいます。"
+            "2 件目は、それと同じ商材・同じ工法の事例を選んでください。"
+            "商材の違う事例を並べると提案として弱くなります。"
+            if similar_to
+            else ""
+        )
         + "\n\nこの見積に最も近い事例を 1 つ、番号で選んでください。"
     )
 
 
-def _pick_index(quote: dict, category_name: str, candidates: list) -> dict:
+def _pick_index(quote: dict, category_name: str, candidates: list, similar_to: str = "") -> dict:
     """Claude に候補 index を選ばせる。失敗時は例外。"""
     client = get_client()
     # structured outputs は integer の minimum/maximum を未サポートのため、
@@ -63,7 +70,9 @@ def _pick_index(quote: dict, category_name: str, candidates: list) -> dict:
         max_tokens=2048,
         system=SYSTEM_PROMPT,
         output_config={"format": {"type": "json_schema", "schema": schema}},
-        messages=[{"role": "user", "content": _build_prompt(quote, category_name, candidates)}],
+        messages=[
+            {"role": "user", "content": _build_prompt(quote, category_name, candidates, similar_to)}
+        ],
     )
     if response.stop_reason == "refusal":
         raise RuntimeError("Claude が個別事例の選定を拒否しました。")
@@ -73,11 +82,17 @@ def _pick_index(quote: dict, category_name: str, candidates: list) -> dict:
     return json.loads(text)
 
 
-def resolve_individual_case(quote: dict, case_key: str, case: dict, exclude_urls=()) -> dict:
+def resolve_individual_case(
+    quote: dict, case_key: str, case: dict, exclude_urls=(), similar_to: str = ""
+) -> dict:
     """1 つのカテゴリーについて、個別事例を解決して返す。
 
     exclude_urls に既出の事例 URL を渡すと、それらを候補から除いて選ぶ。
     同じカテゴリーが 2 回選ばれたときに同じ事例が 2 枚並ぶのを防ぐ。
+
+    similar_to に 1 件目の事例タイトルを渡すと、それと同じ商材の事例を選ばせる。
+    カテゴリーが広い（例: ガレージテントに固定式もアコーディオン式も含まれる）ため、
+    2 件目が別商材にならないようにする。
 
     戻り値: {
       "key": case_key,
@@ -114,7 +129,7 @@ def resolve_individual_case(quote: dict, case_key: str, case: dict, exclude_urls
         return base
 
     try:
-        picked = _pick_index(quote, case["name"], candidates)
+        picked = _pick_index(quote, case["name"], candidates, similar_to=similar_to)
         idx = picked.get("index", 0)
         if not isinstance(idx, int) or idx < 0 or idx >= len(candidates):
             idx = 0
@@ -215,7 +230,11 @@ def resolve_selection(quote: dict, selection: dict, cases: dict) -> list:
         case = cases.get(key)
         if not case:
             continue
-        result = resolve_individual_case(quote, key, case, exclude_urls=used_urls)
+        # 2 件目以降は 1 件目と同じ商材の事例を選ばせる
+        similar_to = resolved[0]["title"] if resolved and resolved[0]["is_individual"] else ""
+        result = resolve_individual_case(
+            quote, key, case, exclude_urls=used_urls, similar_to=similar_to
+        )
         # カテゴリー選定理由（一覧レベル）も保持
         result["category_reason"] = selection.get("reasons", {}).get(key, "")
         used_urls.add(result["url"])

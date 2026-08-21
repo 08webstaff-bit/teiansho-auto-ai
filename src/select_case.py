@@ -18,12 +18,12 @@ CASES_PATH = Path(__file__).resolve().parent.parent / "data" / "cases.json"
 
 # 業種・施設タイプ別のフォールバック用デフォルトキー（cases.json のキーのみ）
 CATEGORY_DEFAULTS = {
-    "工場": ["factory_passage_permanent", "factory_jabara_permanent"],
-    "商業施設": ["commercial_updown_shade", "commercial_w_awning"],
-    "教育施設": ["school_shade_garden", "school_shade_pool"],
-    "イベント": ["event_temporary", "event_one_touch"],
-    "倉庫・物流": ["warehouse", "factory_passage_permanent"],
-    "その他": ["event_temporary", "warehouse"],
+    "工場": ["nisabaki_tent", "jabara_tent"],
+    "商業施設": ["awning", "hisashi_tent"],
+    "教育施設": ["kaihei_tent", "shade"],
+    "イベント": ["shade", "parasol"],
+    "倉庫・物流": ["tent_souko", "nisabaki_tent"],
+    "その他": ["kaihei_tent", "tent_souko"],
 }
 
 SYSTEM_PROMPT = (
@@ -34,7 +34,7 @@ SYSTEM_PROMPT = (
     "無理に別カテゴリーを 2 つめに選ばず、同じキーを 2 回選んでください。"
     "同じキーを 2 回選んだ場合は、そのカテゴリー内の別々の施工事例が自動で割り当てられます。"
     "商材が違う事例を 2 件目に出すより、同じ商材の事例を 2 件見せるほうが提案として有効です。"
-    "ぴったり該当する事例がない場合は、カテゴリの近い products ページのキーを選んでください。"
+    "ぴったり該当する事例がない場合は、最も商材の近いカテゴリーのキーを選んでください。"
     "各キーの選定理由は、営業担当が顧客に説明できるよう日本語 1〜2 文で書いてください。"
 )
 

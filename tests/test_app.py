@@ -63,10 +63,10 @@ def _patch_selection(monkeypatch, fallback=False):
         sc,
         "select_cases",
         lambda quote, cases=None, max_retries=1: {
-            "selected": ["nisabaki_tent_list", "factory_passage_permanent"],
+            "selected": ["nisabaki_tent", "jabara_tent"],
             "reasons": {
-                "nisabaki_tent_list": "荷捌き用途に合致するため。",
-                "factory_passage_permanent": "工場内の常設ニーズに合致するため。",
+                "nisabaki_tent": "荷捌き用途に合致するため。",
+                "jabara_tent": "工場内の常設ニーズに合致するため。",
             },
             "fallback": fallback,
             **({"error": "テスト用エラー"} if fallback else {}),
@@ -76,7 +76,7 @@ def _patch_selection(monkeypatch, fallback=False):
     def fake_resolve(quote, selection, cases):
         return [
             {
-                "key": "nisabaki_tent_list",
+                "key": "nisabaki_tent",
                 "category_name": "荷捌き場テント 事例一覧",
                 "url": "https://08tent.co.jp/works/83528/",
                 "title": "大型トラック対応・荷捌き用片持ちテント屋根",
@@ -87,13 +87,13 @@ def _patch_selection(monkeypatch, fallback=False):
                 "category_reason": "荷捌き用途に合致するため。",
             },
             {
-                "key": "factory_passage_permanent",
-                "category_name": "工場間通路テント（常設・レール有）",
-                "url": "https://08tent.co.jp/works/58612/",
-                "title": "工場間通路テント（常設・レール有）",
+                "key": "jabara_tent",
+                "category_name": "ジャバラ（伸縮式）テント",
+                "url": "https://08tent.co.jp/works/83680/",
+                "title": "前面・側面カーテン式の上屋テント",
                 "thumbnail": None,
-                "reason": "",
-                "is_individual": False,
+                "reason": "工場内の常設ニーズに合致するため。",
+                "is_individual": True,
                 "resolved": True,
                 "category_reason": "工場内の常設ニーズに合致するため。",
             },
@@ -122,7 +122,7 @@ def test_case_selection_flow_with_mocked_api(monkeypatch):
     page_text = " ".join(md.value for md in at.markdown)
     # 一覧ページではなく個別事例 URL が表示される
     assert "https://08tent.co.jp/works/83528/" in page_text
-    assert "https://08tent.co.jp/works/58612/" in page_text
+    assert "https://08tent.co.jp/works/83680/" in page_text
     assert "大型トラック対応・荷捌き用片持ちテント屋根" in page_text
     # 一覧 URL は最終提示に残らない
     assert "/works_kw/" not in page_text

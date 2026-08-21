@@ -81,3 +81,64 @@ def test_parse_case_list_ignores_pagination_and_products():
     urls = [c["url"] for c in cases]
     assert not any("/works_kw/" in u for u in urls)
     assert not any("/products/" in u for u in urls)
+
+
+def test_page_url_for_category_list():
+    from src.scrape import page_url
+
+    base = "https://08tent.co.jp/works_kw/parking-garage/"
+    assert page_url(base, 1) == base
+    assert page_url(base, 2) == "https://08tent.co.jp/works_kw/parking-garage/page/2/"
+    assert page_url(base, 3) == "https://08tent.co.jp/works_kw/parking-garage/page/3/"
+
+
+def test_page_url_for_search_result():
+    from src.scrape import page_url
+
+    base = "https://08tent.co.jp/?post_type=works&s=%E3%82%A2"
+    assert page_url(base, 1) == base
+    assert page_url(base, 2) == base + "&paged=2"
+
+
+def test_fetch_case_list_follows_pages(monkeypatch):
+    """1 ページ目だけだと該当事例を取りこぼすので、全ページを辿る。"""
+    import src.scrape as sc
+
+    page2 = SAMPLE_HTML.replace("83680", "70001").replace("83528", "70002")
+
+    class Resp:
+        def __init__(self, text):
+            self.text = text
+
+        def raise_for_status(self):
+            pass
+
+    def fake_get(url, **kw):
+        if url.endswith("/page/2/"):
+            return Resp(page2)
+        if "/page/" in url:
+            raise RuntimeError("404")  # 3 ページ目以降は存在しない
+        return Resp(SAMPLE_HTML)
+
+    monkeypatch.setattr(sc.requests, "get", fake_get)
+    monkeypatch.setattr(sc, "_ensure_dir", lambda p: False)  # キャッシュ無効
+    cases = sc.fetch_case_list("https://08tent.co.jp/works_kw/nisabaki-tent/")
+    urls = [c["url"] for c in cases]
+    assert len(cases) == 4
+    assert "https://08tent.co.jp/works/70001/" in urls
+
+
+def test_fetch_case_list_stops_when_page_repeats(monkeypatch):
+    """同じ内容が返り続けるサイトでも無限には辿らない。"""
+    import src.scrape as sc
+
+    class Resp:
+        text = SAMPLE_HTML
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr(sc.requests, "get", lambda url, **kw: Resp())
+    monkeypatch.setattr(sc, "_ensure_dir", lambda p: False)
+    cases = sc.fetch_case_list("https://08tent.co.jp/works_kw/nisabaki-tent/")
+    assert len(cases) == 2

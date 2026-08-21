@@ -19,8 +19,8 @@ QUOTE = {
 }
 
 RESOLVED = [
-    {"key": "nisabaki_tent_list", "category_name": "荷捌き場テント一覧", "url": "https://08tent.co.jp/works/83528/", "title": "大型トラック対応 片持ちテント屋根", "thumbnail": None, "reason": "仕様一致", "is_individual": True, "resolved": True, "category_reason": "荷捌き用途"},
-    {"key": "factory_passage_permanent", "category_name": "工場間通路テント", "url": "https://08tent.co.jp/works/58612/", "title": "工場間通路テント（常設）", "thumbnail": None, "reason": "", "is_individual": False, "resolved": True, "category_reason": "常設ニーズ"},
+    {"key": "nisabaki_tent", "category_name": "荷捌き場テント一覧", "url": "https://08tent.co.jp/works/83528/", "title": "大型トラック対応 片持ちテント屋根", "thumbnail": None, "reason": "仕様一致", "is_individual": True, "resolved": True, "category_reason": "荷捌き用途"},
+    {"key": "jabara_tent", "category_name": "工場間通路テント", "url": "https://08tent.co.jp/works/58612/", "title": "工場間通路テント（常設）", "thumbnail": None, "reason": "", "is_individual": False, "resolved": True, "category_reason": "常設ニーズ"},
 ]
 
 TEXT = {
