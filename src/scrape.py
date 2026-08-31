@@ -240,11 +240,26 @@ def _case_number(case_url: str) -> str:
     return m.group(1) if m else ""
 
 
+def _image_prefix(og_image_url: str, case_url: str) -> str:
+    """その事例の写真を見分けるためのファイル名プレフィックス（例: "39880"）。
+
+    記事番号と写真のファイル名が一致しない事例がある
+    （例: /works/42821/ の写真は 39880_1.jpg 〜 39880_6.jpg）。
+    og:image はその事例の代表写真なので、そのファイル名から番号を取るのが確実。
+    取れない場合だけ URL の事例番号にフォールバックする。
+    """
+    if og_image_url:
+        m = re.match(r"(\d+)[_-]", og_image_url.rsplit("/", 1)[-1])
+        if m:
+            return m.group(1)
+    return _case_number(case_url)
+
+
 def fetch_case_image_urls(case_url: str) -> list:
     """個別事例ページから施工写真 URL（メイン＋サブ）を取得する。
 
     - og:image をメイン写真として先頭に
-    - 事例番号プレフィックス（例: 83528_）の uploads 画像をサブに
+    - 同じ番号プレフィックス（例: 39880_）の uploads 画像をサブに
     取得失敗時は空リスト。
     """
     try:
@@ -257,17 +272,18 @@ def fetch_case_image_urls(case_url: str) -> list:
     urls = []
 
     og = soup.find("meta", property="og:image")
-    if og and og.get("content"):
-        urls.append(urljoin(case_url, og["content"]))
+    og_url = urljoin(case_url, og["content"]) if og and og.get("content") else ""
+    if og_url:
+        urls.append(og_url)
 
-    num = _case_number(case_url)
+    num = _image_prefix(og_url, case_url)
     for img in soup.find_all("img"):
         src = img.get("src") or img.get("data-src") or ""
         if "/wp-content/uploads/" not in src or src.lower().endswith((".svg", ".png")):
             continue
         # この事例に紐づく写真のみ（番号プレフィックス）。sで終わる縮小版は本体を優先
         fname = src.rsplit("/", 1)[-1]
-        if num and not fname.startswith(f"{num}_"):
+        if num and not re.match(rf"{num}[_-]", fname):
             continue
         full = urljoin(case_url, src)
         # 300x225 等のサムネサイズ表記を外して原寸を狙う

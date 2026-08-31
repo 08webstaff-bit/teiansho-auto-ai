@@ -13,7 +13,17 @@ URL 捏造防止:
 """
 
 from .llm import MODEL, get_client
-from .scrape import fetch_case_list, fetch_page_thumbnail, is_list_url
+from .scrape import (
+    fetch_case_image_urls,
+    fetch_case_list,
+    fetch_page_thumbnail,
+    is_list_url,
+)
+
+# 提案書の事例スライドは写真 2 枚で組む。これを下回る事例は選び直す
+REQUIRED_PHOTOS = 2
+# 選び直しの上限（1 回の選定で増える通信・API 呼び出しを抑える）
+MAX_REPICKS = 2
 
 SYSTEM_PROMPT = (
     "あなたは丸八テント商会のベテラン営業です。"
@@ -128,35 +138,58 @@ def resolve_individual_case(
         # スクレイピング失敗（または候補を出し尽くした）→ カテゴリー一覧 URL のまま
         return base
 
-    try:
-        picked = _pick_index(quote, case["name"], candidates, similar_to=similar_to)
-        idx = picked.get("index", 0)
-        if not isinstance(idx, int) or idx < 0 or idx >= len(candidates):
-            idx = 0
-        chosen = candidates[idx]
-        base.update(
-            {
-                "url": chosen["url"],
-                "title": chosen["title"],
-                "thumbnail": chosen.get("thumbnail"),
-                "reason": picked.get("reason", ""),
-                "is_individual": True,
-                "resolved": True,
-            }
-        )
-    except Exception:
-        # 選定失敗 → 候補の先頭を使う（URL は実在するので捏造ではない）
-        chosen = candidates[0]
-        base.update(
-            {
-                "url": chosen["url"],
-                "title": chosen["title"],
-                "thumbnail": chosen.get("thumbnail"),
-                "is_individual": True,
-                "resolved": True,
-            }
-        )
+    chosen, reason = _pick_with_enough_photos(quote, case["name"], candidates, similar_to)
+    base.update(
+        {
+            "url": chosen["url"],
+            "title": chosen["title"],
+            "thumbnail": chosen.get("thumbnail"),
+            "reason": reason,
+            "is_individual": True,
+            "resolved": True,
+        }
+    )
     return base
+
+
+def _has_enough_photos(case_url: str) -> bool:
+    """事例スライドを写真 2 枚で組めるか。取得に失敗したら判定せず通す。"""
+    try:
+        return len(fetch_case_image_urls(case_url)) >= REQUIRED_PHOTOS
+    except Exception:
+        return True
+
+
+def _pick_with_enough_photos(quote: dict, category_name: str, candidates: list, similar_to: str):
+    """写真が 2 枚以上ある事例を選ぶ。足りなければ除外して選び直す。
+
+    戻り値は (選んだ候補, 選定理由)。
+    事例ページの写真が 1 枚しかないと提案書のスライドが 1 枚組になってしまうため、
+    同じカテゴリー内で写真の揃っている事例を優先する。
+    選び直しても見つからない場合は、最初に選ばれた事例をそのまま使う
+    （事例の適合度のほうが写真枚数より重要なので、無理に外さない）。
+    """
+    remaining = list(candidates)
+    first = None
+    for _ in range(MAX_REPICKS + 1):
+        if not remaining:
+            break
+        try:
+            picked = _pick_index(quote, category_name, remaining, similar_to=similar_to)
+            idx = picked.get("index", 0)
+            if not isinstance(idx, int) or idx < 0 or idx >= len(remaining):
+                idx = 0
+            chosen, reason = remaining[idx], picked.get("reason", "")
+        except Exception:
+            # 選定失敗 → 候補の先頭を使う（URL は実在するので捏造ではない）
+            chosen, reason = remaining[0], ""
+        if first is None:
+            first = (chosen, reason)
+        if _has_enough_photos(chosen["url"]):
+            return chosen, reason
+        remaining = [c for c in remaining if c["url"] != chosen["url"]]
+
+    return first if first else (candidates[0], "")
 
 
 def category_candidates(case: dict) -> list:

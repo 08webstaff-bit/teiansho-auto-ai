@@ -13,9 +13,11 @@ CANDIDATES = [
 
 
 @pytest.fixture(autouse=True)
-def no_network_thumbnail(monkeypatch):
-    """og:image 取得は既定でモックし、テストがネットワークに出ないようにする。"""
+def no_network(monkeypatch):
+    """画像取得は既定でモックし、テストがネットワークに出ないようにする。"""
     monkeypatch.setattr(rc, "fetch_page_thumbnail", lambda url: "")
+    # 既定では「写真は足りている」ことにして、選び直しを起こさない
+    monkeypatch.setattr(rc, "fetch_case_image_urls", lambda url: ["a.jpg", "b.jpg"])
 
 
 def test_non_list_case_used_as_is(monkeypatch):
@@ -249,3 +251,43 @@ def test_similar_to_appears_in_the_prompt():
 def test_prompt_has_no_similarity_note_for_the_first_case():
     prompt = rc._build_prompt(QUOTE, "ガレージテント", CANDIDATES)
     assert "参考事例 1 として" not in prompt
+
+
+def test_repicks_when_the_case_has_only_one_photo(monkeypatch):
+    """写真が 1 枚しかない事例は、提案書が 1 枚組になるので選び直す。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
+    photos = {
+        "https://08tent.co.jp/works/83680/": ["only.jpg"],          # 1 枚だけ
+        "https://08tent.co.jp/works/83528/": ["a.jpg", "b.jpg"],    # 2 枚ある
+    }
+    monkeypatch.setattr(rc, "fetch_case_image_urls", lambda url: photos[url])
+    # AI は常に先頭を選ぶ。1 回目は 83680、除外後の 2 回目は 83528 になる
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 0, "reason": "最も近い"})
+    case = {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
+    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent", case)
+    assert result["url"] == "https://08tent.co.jp/works/83528/"
+
+
+def test_keeps_the_best_case_when_no_candidate_has_two_photos(monkeypatch):
+    """どれも写真 1 枚なら、事例の適合度を優先して最初の選択を残す。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
+    monkeypatch.setattr(rc, "fetch_case_image_urls", lambda url: ["only.jpg"])
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 0, "reason": "最も近い"})
+    case = {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
+    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent", case)
+    assert result["url"] == "https://08tent.co.jp/works/83680/"  # 1 回目の選択
+    assert result["reason"] == "最も近い"
+
+
+def test_photo_check_failure_does_not_block(monkeypatch):
+    """写真の確認に失敗しても選定は止めない。"""
+    monkeypatch.setattr(rc, "fetch_case_list", lambda url: CANDIDATES)
+
+    def boom(url):
+        raise RuntimeError("network error")
+
+    monkeypatch.setattr(rc, "fetch_case_image_urls", boom)
+    monkeypatch.setattr(rc, "_pick_index", lambda q, name, c, **kw: {"index": 1, "reason": "最も近い"})
+    case = {"name": "荷捌き場テント 事例一覧", "url": "https://08tent.co.jp/works_kw/nisabaki-tent/"}
+    result = rc.resolve_individual_case(QUOTE, "nisabaki_tent", case)
+    assert result["url"] == "https://08tent.co.jp/works/83528/"

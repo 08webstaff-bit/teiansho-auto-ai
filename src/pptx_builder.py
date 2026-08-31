@@ -31,6 +31,13 @@ FONT = "游ゴシック"
 SLIDE_W = Emu(12192000)
 SLIDE_H = Emu(6858000)
 
+# 参考類似事例スライドの写真枠（上下 2 枠・同じ大きさ）
+PHOTO_LEFT = 700000
+PHOTO_TOP = 1500000
+PHOTO_W = 5400000
+PHOTO_H = 2350000
+PHOTO_GAP = 150000
+
 COMPANY_NAME = "株式会社丸八テント商会"
 COMPANY_URL = "https://08tent.co.jp/"
 COMPANY_TEL = "お問い合わせは担当営業までご連絡ください"
@@ -151,17 +158,17 @@ def _slide_case(prs, resolved_case):
         except Exception:
             images = []
 
-    img_left, img_top, img_w = Emu(700000), Emu(1500000), Emu(5400000)
-    if images:
-        try:
-            slide.shapes.add_picture(images[0], img_left, img_top, width=img_w)
-        except Exception:
-            _placeholder(slide, img_left, img_top, img_w, Emu(3600000))
-    else:
-        _placeholder(slide, img_left, img_top, img_w, Emu(3600000))
+    # 写真は上下 2 枠に固定サイズで配置する。1 枚目の高さは画像の縦横比で
+    # 変わるため、以前は 2 枚目が 1 枚目に重なることがあった。
+    for i in range(2):
+        top = Emu(PHOTO_TOP + i * (PHOTO_H + PHOTO_GAP))
+        path = images[i] if i < len(images) else None
+        if path and _add_fitted_picture(slide, path, Emu(PHOTO_LEFT), top, Emu(PHOTO_W), Emu(PHOTO_H)):
+            continue
+        _placeholder(slide, Emu(PHOTO_LEFT), top, Emu(PHOTO_W), Emu(PHOTO_H))
 
     # 右側テキスト
-    _, tf = _add_textbox(slide, Emu(6400000), Emu(1500000), Emu(5100000), Emu(4200000))
+    _, tf = _add_textbox(slide, Emu(6400000), Emu(PHOTO_TOP), Emu(5100000), Emu(4200000))
     _add_paragraph(tf, resolved_case.get("title", ""), size=22, bold=True, color=DARK, first=True, space_after=16)
     if resolved_case.get("category_name") and resolved_case.get("is_individual"):
         _add_paragraph(tf, f"カテゴリー: {resolved_case['category_name']}", size=13, color=GRAY, space_after=20)
@@ -173,12 +180,23 @@ def _slide_case(prs, resolved_case):
     _set_font(run, size=13, color=CORPORATE)
     _hyperlink(run, resolved_case.get("url", ""))
 
-    # 2枚目のサブ写真があれば下に小さく
-    if len(images) > 1:
-        try:
-            slide.shapes.add_picture(images[1], img_left, Emu(5200000), width=Emu(2600000))
-        except Exception:
-            pass
+
+def _add_fitted_picture(slide, path, left, top, box_w, box_h):
+    """枠に収まるよう縦横比を保って写真を配置する（枠内で中央そろえ）。
+
+    成功したら True。python-pptx が読めない画像なら False を返して
+    呼び出し側でプレースホルダーに切り替える。
+    """
+    try:
+        pic = slide.shapes.add_picture(path, left, top, width=box_w)
+    except Exception:
+        return False
+    if pic.height > box_h:
+        pic.width = int(pic.width * box_h / pic.height)
+        pic.height = box_h
+    pic.left = int(left + (box_w - pic.width) / 2)
+    pic.top = int(top + (box_h - pic.height) / 2)
+    return True
 
 
 def _placeholder(slide, left, top, width, height):
