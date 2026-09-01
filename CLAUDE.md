@@ -46,6 +46,14 @@ URL の入手経路は次の 2 つだけ:
 `src/headless.py` が UI 抜きの共通オーケストレーション層。
 Streamlit・Web API・外部スキルはすべてここを経由するので、ロジックの二重管理はしない。
 
+入口はもう 1 つある。**見積検索AI（mitsumori-search-ai）からの引き継ぎ**では、
+見積内容が URL のフラグメント（`#quote=<base64url>`）で渡ってくるため、
+`extract.py` を通さず STEP2「内容確認」から始まる（`index.html` の `importFromHash()`）。
+渡ってくる JSON は `QUOTE_SCHEMA` と同じ形。外から来る値なので `normalizeIncomingQuote()`
+で型と業種（`INDUSTRY` の値かどうか）を必ず検証してから `S.quote` に入れること。
+`QUOTE_SCHEMA` のフィールドを変えるときは、見積検索AI 側の送信処理
+（`index.html` の `buildProposalPayload()`）も合わせて直す。
+
 ## 画面は 2 系統（ロジックは共通）
 
 | 用途 | 入口 | 起動 |

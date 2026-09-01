@@ -62,10 +62,27 @@ streamlit run app.py
 
 ブラウザで http://localhost:8501 が開きます。
 
-## API サーバー（見積検索AI との連携用）
+## 見積検索AI からの引き継ぎ
 
-見積検索AI（mitsumori-search-ai）の画面から「⛺ 提案書を作成（pptx）」ボタンで
-提案書を生成するには、この提案書 API を起動しておきます（見積書 xlsx を受け取り pptx を返す）。
+見積検索AI（mitsumori-search-ai）の見積書モーダルにある
+「⛺ この見積で提案書を作る」を押すと、この画面が新しいタブで開き、
+**STEP1（ファイルの読み取り）を飛ばして STEP2「内容確認」から始まります**。
+そのあとは通常どおり事例を選んで提案書を作成します。
+
+- 受け渡しは URL のフラグメント（`https://…/#quote=<base64url>`）。
+  フラグメントはサーバーに送信されないため、顧客名や金額が通信経路に残りません。
+  取り込んだ直後に `history.replaceState` で URL から消しています。
+- 中身は `extract.py` の `QUOTE_SCHEMA` と同じ形（`customer_name` / `project_name` /
+  `industry_type` / `industry_reason` / `total_amount` / `items[]`）。受信側では
+  `normalizeIncomingQuote()` で型と業種の値を検証してから使います。
+- 実装は `index.html` の `importFromHash()`。サーバー側の変更は不要です。
+- ファイル経由（見積書 xlsx をダウンロードしてアップロード）も従来どおり使えます。
+
+## API サーバー（一発生成 / ローカル連携用）
+
+見積書ファイルから提案書 pptx を一度に生成する API も用意しています
+（見積書 xlsx を受け取り pptx を返す）。抽出→事例選定→生成で 1〜2 分かかるため、
+Vercel の関数上限（60 秒）を超えます。本番では上の「引き継ぎ」方式を使ってください。
 
 ```bash
 .venv/bin/python -m uvicorn src.api_server:app --port 8600

@@ -558,6 +558,60 @@ function downloadPptx() {
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
+/* ---------------- 見積検索AI からの引き継ぎ ---------------- */
+// 見積検索AI（mitsumori-search-ai）が URL のフラグメントに載せてきた見積内容を取り込み、
+// STEP1（ファイルの読み取り）を飛ばして STEP2「内容確認」から始める。
+// フラグメント(#以降)はサーバーに送信されないため、顧客名や金額が通信経路に残らない。
+const INDUSTRY_SET = new Set(INDUSTRY);
+
+function decodePayload(str) {
+  const b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+// 受け取った値をそのまま信用せず、抽出結果（QUOTE_SCHEMA）と同じ形に整えてから使う
+function normalizeIncomingQuote(q) {
+  const num = v => (v === null || v === undefined || v === "" || !isFinite(Number(v)) ? null : Number(v));
+  const items = (Array.isArray(q.items) ? q.items : []).map(it => ({
+    name: String((it && it.name) || ""),
+    spec: String((it && it.spec) || ""),
+    quantity: String((it && it.quantity) || ""),
+    unit_price: num(it && it.unit_price),
+    amount: num(it && it.amount),
+  })).filter(it => it.name || it.spec || it.amount !== null);
+  if (!items.length) throw new Error("明細がありません");
+  return {
+    customer_name: String(q.customer_name || ""),
+    project_name: String(q.project_name || ""),
+    industry_type: INDUSTRY_SET.has(q.industry_type) ? q.industry_type : "その他",
+    industry_reason: String(q.industry_reason || ""),
+    total_amount: num(q.total_amount),
+    items,
+  };
+}
+
+function importFromHash() {
+  const m = (location.hash || "").match(/[#&]quote=([A-Za-z0-9\-_]+)/);
+  if (!m) return;
+  // 顧客名や金額を URL・ブラウザ履歴に残さないよう、読み取ったらすぐ消す
+  history.replaceState(null, "", location.pathname + location.search);
+  try {
+    const payload = decodePayload(m[1]);
+    S.quote = normalizeIncomingQuote((payload && payload.quote) || {});
+  } catch (e) {
+    note("msg1", "ng", "見積検索AIから受け取ったデータを読み取れませんでした。お手数ですが、見積書ファイルをアップロードしてください。");
+    return;
+  }
+  renderQuote();
+  document.getElementById("sec2").classList.remove("hide");
+  note("msg2", "ok",
+    "見積検索AI から見積内容を受け取りました。内容を確認・修正して「この内容で事例を選定する」に進んでください。" +
+    "<br>※業種は自動判定です。違っていれば選び直してください。");
+  step(2);
+}
+
 function resetAll() {
   S.file = null; S.quote = null; S.resolved = []; S.pptx = null;
   document.getElementById("file").value = "";
@@ -567,6 +621,11 @@ function resetAll() {
   ["msg1","msg2","msg3","msg4"].forEach(id => note(id, "", ""));
   step(1);
 }
+
+importFromHash();
+// 既に開いているタブに引き継ぎURLが渡された場合（フラグメントだけの遷移では
+// ページが再読み込みされない）にも取り込めるようにする
+window.addEventListener("hashchange", importFromHash);
 </script>
 </body>
 </html>
